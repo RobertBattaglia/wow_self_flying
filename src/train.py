@@ -27,37 +27,64 @@ class MinimapDataset(Dataset):
 
 
 class MinimapCNN(nn.Module):
-    def __init__(self, num_actions=4):
+    def __init__(self, num_actions=3, dropout1=0.5, dropout2=0.3, 
+                 kernel_sizes=[8, 3, 3], strides=[2, 1, 1],
+                 pool_sizes=[5, 3, 2], channels=[32, 64, 128],
+                 hidden_dims=[512, 128]):
         super(MinimapCNN, self).__init__()
         
         # CNN feature extractor
         self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=8, stride=2),
+            nn.Conv2d(1, channels[0], kernel_size=kernel_sizes[0], stride=strides[0]),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=5, stride=2),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1),
+            nn.MaxPool2d(kernel_size=pool_sizes[0], stride=2),
+            nn.Conv2d(channels[0], channels[1], kernel_size=kernel_sizes[1], stride=strides[1]),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1),
+            nn.MaxPool2d(kernel_size=pool_sizes[1], stride=2),
+            nn.Conv2d(channels[1], channels[2], kernel_size=kernel_sizes[2], stride=strides[2]),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=pool_sizes[2], stride=2),
         )
         
-        # Calculate output dimension after convolutions
-        # For typical 200x200 input, this will be 128 x 11 x 11
+        # Calculate feature map size
+        # This is approximate and may need adjustment based on input size
+        self.feature_size = self._calculate_feature_size(200, 200, 
+                                                       kernel_sizes, strides, pool_sizes)
         
         # Fully connected layers
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(128 * 10 * 10, 512),
+            nn.Linear(channels[2] * self.feature_size * self.feature_size, hidden_dims[0]),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(512, 128),
+            nn.Dropout(dropout1),
+            nn.Linear(hidden_dims[0], hidden_dims[1]),
             nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, num_actions),
-            nn.Sigmoid()  # For multi-label classification (multiple keys can be pressed at once)
+            nn.Dropout(dropout2),
+            nn.Linear(hidden_dims[1], num_actions),
+            nn.Sigmoid()
         )
+    
+    def _calculate_feature_size(self, h, w, kernel_sizes, strides, pool_sizes):
+        """Calculate the feature map size after convolutions"""
+        # First conv + pool
+        h = (h - kernel_sizes[0]) // strides[0] + 1
+        w = (w - kernel_sizes[0]) // strides[0] + 1
+        h = (h - pool_sizes[0]) // 2 + 1
+        w = (w - pool_sizes[0]) // 2 + 1
+        
+        # Second conv + pool
+        h = (h - kernel_sizes[1]) // strides[1] + 1
+        w = (w - kernel_sizes[1]) // strides[1] + 1
+        h = (h - pool_sizes[1]) // 2 + 1
+        w = (w - pool_sizes[1]) // 2 + 1
+        
+        # Third conv + pool
+        h = (h - kernel_sizes[2]) // strides[2] + 1
+        w = (w - kernel_sizes[2]) // strides[2] + 1
+        h = (h - pool_sizes[2]) // 2 + 1
+        w = (w - pool_sizes[2]) // 2 + 1
+        
+        return min(h, w)  # Return the smallest dimension
         
     def forward(self, x):
         x = self.features(x)
@@ -120,19 +147,30 @@ def load_and_balance_data():
     return frames_train, keys_train, frames_val, keys_val, sample_weights
 
 
-def train_model(model, train_loader, val_loader, device, num_epochs=30):
+def train_model(model, train_loader, val_loader, device, num_epochs=10, learning_rate=1e-4, weight_decay=1e-4, 
+                dropout1=0.5, dropout2=0.3):
     """Train the model."""
     print(f"Training model on {device}...")
     
     # Loss and optimizer
     criterion = nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.5)
     
     # Training history
     history = {
         'train_loss': [],
-        'val_loss': []
+        'val_loss': [],
+        'hyperparams': {
+            'learning_rate': learning_rate,
+            'weight_decay': weight_decay, 
+            'batch_size': train_loader.batch_size,
+            'num_epochs': num_epochs,
+            'dropout1': dropout1,
+            'dropout2': dropout2,
+            'optimizer': 'Adam',
+            'scheduler': 'ReduceLROnPlateau'
+        }
     }
     
     for epoch in range(num_epochs):
@@ -180,20 +218,58 @@ def train_model(model, train_loader, val_loader, device, num_epochs=30):
 
 
 def plot_training_history(history, timestamp):
-    """Plot training/validation loss."""
+    """Plot training/validation loss with hyperparameters."""
     plt.figure(figsize=(10, 6))
     plt.plot(history['train_loss'], label='Train Loss')
     plt.plot(history['val_loss'], label='Validation Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title('Training History')
+    
+    # Create hyperparameter string for title
+    hp = history['hyperparams']
+    title = f"Training History (LR={hp['learning_rate']}, WD={hp['weight_decay']}, BS={hp['batch_size']})"
+    plt.title(title)
+    
     plt.legend()
     plt.grid(True)
     
     # Create plots directory if it doesn't exist
     os.makedirs("plots", exist_ok=True)
-    plt.savefig(f"plots/training_history-{timestamp}.png")
+    plot_path = f"plots/training_history-{timestamp}.png"
+    plt.savefig(plot_path)
     plt.show()
+    
+    # Save hyperparameters to JSON file
+    import json
+    os.makedirs("hyperparams", exist_ok=True)
+    params = {
+        'timestamp': timestamp,
+        'model_path': f"minimap_cnn_{timestamp}.pth",
+        'plot_path': plot_path,
+        'hyperparameters': history['hyperparams'],
+        'final_train_loss': history['train_loss'][-1],
+        'final_val_loss': history['val_loss'][-1]
+    }
+    
+    with open(f"hyperparams/params_{timestamp}.json", "w") as f:
+        json.dump(params, f, indent=4)
+    
+    # Also update a master log file with all runs
+    master_log_path = "hyperparams/training_log.json"
+    
+    try:
+        if os.path.exists(master_log_path):
+            with open(master_log_path, "r") as f:
+                master_log = json.load(f)
+        else:
+            master_log = {"runs": []}
+        
+        master_log["runs"].append(params)
+        
+        with open(master_log_path, "w") as f:
+            json.dump(master_log, f, indent=4)
+    except Exception as e:
+        print(f"Warning: Could not update master log: {e}")
 
 
 def main():
@@ -219,16 +295,49 @@ def main():
         replacement=True
     )
     
-    # Create data loaders
-    train_loader = DataLoader(train_dataset, batch_size=32, sampler=sampler)
-    val_loader = DataLoader(val_dataset, batch_size=32, shuffle=True)
+    # Architecture hyperparameters
+    kernel_sizes = [5, 3, 1]
+    strides = [2, 1, 1]
+    pool_sizes = [5, 3, 2]
+    channels = [32, 64, 128]
+    hidden_dims = [512, 128]
     
-    # Initialize model
-    model = MinimapCNN().to(device)
+    # Initialize model with hyperparameters
+    dropout1 = 0.8
+    dropout2 = 0.6
+    learning_rate = 5e-5
+    weight_decay = 1e-4
+    num_epochs = 50
+    batch_size = 32
+    
+    model = MinimapCNN(
+        num_actions=3,
+        dropout1=dropout1,
+        dropout2=dropout2,
+        kernel_sizes=kernel_sizes,
+        strides=strides,
+        pool_sizes=pool_sizes,
+        channels=channels,
+        hidden_dims=hidden_dims
+    ).to(device)
     print(model)
     
-    # Train model
-    trained_model, history = train_model(model, train_loader, val_loader, device, num_epochs=30)
+    # Create data loaders with specified batch size
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
+    
+    # Train model with hyperparameters
+    trained_model, history = train_model(
+        model, 
+        train_loader, 
+        val_loader, 
+        device, 
+        num_epochs=num_epochs,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        dropout1=dropout1,
+        dropout2=dropout2
+    )
     
     timestamp = int(time.time())
     # Plot training history

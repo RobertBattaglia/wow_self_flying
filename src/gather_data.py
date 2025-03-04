@@ -30,7 +30,7 @@ def on_release(key):
         pressed_keys.remove(key_name)
 
 def keys_to_multi_hot(pressed_keys):
-    KEYS = ["left", "right", "space", "w"]
+    KEYS = ["left", "right", "w"]
     one_hot = np.zeros(len(KEYS))
     for i, key in enumerate(KEYS):
         if key in pressed_keys:
