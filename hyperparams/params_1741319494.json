@@ -1,0 +1,18 @@
+{
+    "timestamp": 1741319494,
+    "model_path": "minimap_cnn_1741319494.pth",
+    "plot_path": "plots/training_history-1741319494.png",
+    "hyperparameters": {
+        "learning_rate": 0.0001,
+        "weight_decay": 0.0005,
+        "batch_size": 64,
+        "num_epochs": 15,
+        "dropout1": 0.5,
+        "dropout2": 0.4,
+        "dropout3": 0.3,
+        "optimizer": "Adam",
+        "scheduler": "ReduceLROnPlateau"
+    },
+    "final_train_loss": 0.04519598419881529,
+    "final_val_loss": 0.1472707858019405
+}

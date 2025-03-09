@@ -152,6 +152,95 @@
             },
             "final_train_loss": 0.05221194727438511,
             "final_val_loss": 0.10803494298793745
+        },
+        {
+            "timestamp": 1741318015,
+            "model_path": "minimap_cnn_1741318015.pth",
+            "plot_path": "plots/training_history-1741318015.png",
+            "hyperparameters": {
+                "learning_rate": 5e-05,
+                "weight_decay": 0.0001,
+                "batch_size": 32,
+                "num_epochs": 50,
+                "dropout1": 0.8,
+                "dropout2": 0.6,
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau"
+            },
+            "final_train_loss": 0.043801289942736424,
+            "final_val_loss": 0.13161996622052458
+        },
+        {
+            "timestamp": 1741319494,
+            "model_path": "minimap_cnn_1741319494.pth",
+            "plot_path": "plots/training_history-1741319494.png",
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "weight_decay": 0.0005,
+                "batch_size": 64,
+                "num_epochs": 15,
+                "dropout1": 0.5,
+                "dropout2": 0.4,
+                "dropout3": 0.3,
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau"
+            },
+            "final_train_loss": 0.04519598419881529,
+            "final_val_loss": 0.1472707858019405
+        },
+        {
+            "timestamp": 1741319776,
+            "model_path": "minimap_cnn_1741319776.pth",
+            "plot_path": "plots/training_history-1741319776.png",
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "weight_decay": 0.0005,
+                "batch_size": 64,
+                "num_epochs": 15,
+                "dropout1": 0.7,
+                "dropout2": 0.7,
+                "dropout3": 0.7,
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau"
+            },
+            "final_train_loss": 0.09621064411269294,
+            "final_val_loss": 0.17187028421296013
+        },
+        {
+            "timestamp": 1741319977,
+            "model_path": "minimap_cnn_1741319977.pth",
+            "plot_path": "plots/training_history-1741319977.png",
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "weight_decay": 0.0005,
+                "batch_size": 64,
+                "num_epochs": 15,
+                "dropout1": 0.7,
+                "dropout2": 0.7,
+                "dropout3": 0.7,
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau"
+            },
+            "final_train_loss": 0.018168922735171185,
+            "final_val_loss": 0.13825803710354698
+        },
+        {
+            "timestamp": 1741320288,
+            "model_path": "minimap_cnn_1741320288.pth",
+            "plot_path": "plots/training_history-1741320288.png",
+            "hyperparameters": {
+                "learning_rate": 0.0001,
+                "weight_decay": 0.0005,
+                "batch_size": 64,
+                "num_epochs": 15,
+                "dropout1": 0.7,
+                "dropout2": 0.7,
+                "dropout3": 0.7,
+                "optimizer": "Adam",
+                "scheduler": "ReduceLROnPlateau"
+            },
+            "final_train_loss": 0.09644863908489545,
+            "final_val_loss": 0.18457260582182142
         }
     ]
 }

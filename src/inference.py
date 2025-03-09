@@ -57,15 +57,40 @@ def predict(model, image, device):
     model.eval()
     image = preprocess_image(image).to(device)
     with torch.no_grad():
-        output = model(image)
-    return output.cpu().numpy()[0]
+        logits = model(image)
+        predictions = torch.sigmoid(logits)
+    return predictions.cpu().numpy()[0]
 
 def main():
     model_path = "models/minimap_cnn_latest.pth"
     minimap_region = {"top": 100, "left": 2310, "width": 200, "height": 200}
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Architecture hyperparameters
+    kernel_sizes = [8, 5, 3]
+    strides = [2, 1, 1]
+    pool_sizes = [3, 3, 2]
+    channels = [32, 64, 128]
+    hidden_dims = [1024, 256, 128]
     
-    # Load model
-    model = MinimapCNN(kernel_sizes=[5,3,1])
+    # Initialize model with hyperparameters
+    dropout1 = 0.7
+    dropout2 = 0.7
+    dropout3 = 0.7
+    
+    model = MinimapCNN(
+        num_actions=3,
+        dropout1=dropout1,
+        dropout2=dropout2,
+        dropout3=dropout3,
+        kernel_sizes=kernel_sizes,
+        strides=strides,
+        pool_sizes=pool_sizes,
+        channels=channels,
+        hidden_dims=hidden_dims
+    ).to(device)
+
     model.load_state_dict(torch.load(model_path))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -87,11 +112,11 @@ def main():
         
         print([f"{val:.2f}" for val in actions])
         keys_to_press = 0b000
-        if actions[0] > 0.5:
+        if actions[0] > 0.4:
             keys_to_press |= 0b001
-        if actions[1] > 0.5:
+        if actions[1] > 0.4:
             keys_to_press |= 0b010
-        if actions[2] > 0.5:
+        if actions[2] > 0.9:
             keys_to_press |= 0b100
         send_keystrokes(keys_to_press)
         

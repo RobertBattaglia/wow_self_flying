@@ -28,7 +28,7 @@ class MinimapDataset(Dataset):
 
 class MinimapCNN(nn.Module):
     def __init__(self, num_actions=3, dropout1=0.5, dropout2=0.3, 
-                 kernel_sizes=[8, 3, 3], strides=[2, 1, 1],
+                 dropout3=0.3, kernel_sizes=[8, 3, 3], strides=[2, 1, 1],
                  pool_sizes=[5, 3, 2], channels=[32, 64, 128],
                  hidden_dims=[512, 128]):
         super(MinimapCNN, self).__init__()
@@ -60,8 +60,10 @@ class MinimapCNN(nn.Module):
             nn.Linear(hidden_dims[0], hidden_dims[1]),
             nn.ReLU(),
             nn.Dropout(dropout2),
-            nn.Linear(hidden_dims[1], num_actions),
-            nn.Sigmoid()
+            nn.Linear(hidden_dims[1], hidden_dims[2]),
+            nn.ReLU(),
+            nn.Dropout(dropout3),
+            nn.Linear(hidden_dims[2], num_actions),
         )
     
     def _calculate_feature_size(self, h, w, kernel_sizes, strides, pool_sizes):
@@ -148,12 +150,12 @@ def load_and_balance_data():
 
 
 def train_model(model, train_loader, val_loader, device, num_epochs=10, learning_rate=1e-4, weight_decay=1e-4, 
-                dropout1=0.5, dropout2=0.3):
+                dropout1=0.5, dropout2=0.3, dropout3=0.3):
     """Train the model."""
     print(f"Training model on {device}...")
     
     # Loss and optimizer
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3, factor=0.5)
     
@@ -168,6 +170,7 @@ def train_model(model, train_loader, val_loader, device, num_epochs=10, learning
             'num_epochs': num_epochs,
             'dropout1': dropout1,
             'dropout2': dropout2,
+            'dropout3': dropout3,
             'optimizer': 'Adam',
             'scheduler': 'ReduceLROnPlateau'
         }
@@ -296,24 +299,26 @@ def main():
     )
     
     # Architecture hyperparameters
-    kernel_sizes = [5, 3, 1]
+    kernel_sizes = [8, 5, 3]
     strides = [2, 1, 1]
-    pool_sizes = [5, 3, 2]
+    pool_sizes = [3, 3, 2]
     channels = [32, 64, 128]
-    hidden_dims = [512, 128]
+    hidden_dims = [1024, 256, 128]
     
     # Initialize model with hyperparameters
-    dropout1 = 0.8
-    dropout2 = 0.6
-    learning_rate = 5e-5
-    weight_decay = 1e-4
-    num_epochs = 50
-    batch_size = 32
+    dropout1 = 0.7
+    dropout2 = 0.7
+    dropout3 = 0.7
+    learning_rate = 1e-4
+    weight_decay = 5e-4
+    num_epochs = 15
+    batch_size = 64
     
     model = MinimapCNN(
         num_actions=3,
         dropout1=dropout1,
         dropout2=dropout2,
+        dropout3=dropout3,
         kernel_sizes=kernel_sizes,
         strides=strides,
         pool_sizes=pool_sizes,
@@ -336,7 +341,8 @@ def main():
         learning_rate=learning_rate,
         weight_decay=weight_decay,
         dropout1=dropout1,
-        dropout2=dropout2
+        dropout2=dropout2,
+        dropout3=dropout3
     )
     
     timestamp = int(time.time())
